@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 498" width="1160" height="498" role="img" aria-label="Docker image build, Trivy scan and push to GitHub Container Registry">
+<title>Docker image build, Trivy scan and push to GitHub Container Registry</title>
+
+<style>
+  :root, svg {
+    --bg:#ffffff; --surface:#f6f8fa; --text:#1f2328; --muted:#59636e; --border:#d1d9e0; --frame:#afb8c1;
+    --source:#0969da; --source-bg:#ddf4ff;
+    --setup:#8250df;  --setup-bg:#fbefff;
+    --build:#1a7f37;  --build-bg:#dafbe1;
+    --security:#9a6700; --security-bg:#fff8c5;
+    --publish:#bf3989; --publish-bg:#ffeff7;
+    --dest:#bc4c00;   --dest-bg:#fff1e5;
+    --ghpkg:#8250df; --ghcr:#0969da; --nexus:#1a7f37; --acr:#bc4c00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root, svg {
+      --bg:#0d1117; --surface:#161b22; --text:#e6edf3; --muted:#9198a1; --border:#3d444d; --frame:#656c76;
+      --source:#4493f8; --source-bg:rgba(56,139,253,.14);
+      --setup:#ab7df8;  --setup-bg:rgba(171,125,248,.14);
+      --build:#3fb950;  --build-bg:rgba(63,185,80,.14);
+      --security:#d29922; --security-bg:rgba(210,153,34,.16);
+      --publish:#db61a2; --publish-bg:rgba(219,97,162,.14);
+      --dest:#f0883e;   --dest-bg:rgba(240,136,62,.16);
+      --ghpkg:#ab7df8; --ghcr:#4493f8; --nexus:#3fb950; --acr:#f0883e;
+    }
+  }
+  text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; fill: var(--text); }
+  .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+  .bg { fill: var(--bg); stroke: var(--border); }
+  .muted { fill: var(--muted); }
+  .h1 { font-size: 20px; font-weight: 700; }
+  .h2 { font-size: 16px; font-weight: 700; }
+  .h3 { font-size: 13.5px; font-weight: 600; }
+  .frame { fill: var(--surface); stroke: var(--frame); stroke-width: 1.2; }
+  .job { fill: var(--bg); stroke: var(--frame); stroke-width: 1.2; stroke-dasharray: 6 4; }
+  .chip { fill: var(--bg); stroke: var(--border); }
+  .chip-t { font-size: 11px; fill: var(--muted); }
+  .step-t { font-size: 12.5px; font-weight: 600; }
+  .step-s { font-size: 10px; fill: var(--muted); }
+  .kind-t { font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+  .cond { stroke-dasharray: 5 4; }
+  .edge { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+  .ah { fill: var(--muted); }
+  .halo { fill: var(--bg); }
+  .lane { fill: var(--surface); stroke: var(--frame); stroke-width: 1.2; }
+  .node { fill: var(--bg); stroke: var(--border); stroke-width: 1.2; }
+
+  .k-source .box { fill: var(--source-bg); stroke: var(--source); stroke-width: 1.4; }
+  .k-source .kind-t, .k-source .dot { fill: var(--source); }
+
+  .k-setup .box { fill: var(--setup-bg); stroke: var(--setup); stroke-width: 1.4; }
+  .k-setup .kind-t, .k-setup .dot { fill: var(--setup); }
+
+  .k-build .box { fill: var(--build-bg); stroke: var(--build); stroke-width: 1.4; }
+  .k-build .kind-t, .k-build .dot { fill: var(--build); }
+
+  .k-security .box { fill: var(--security-bg); stroke: var(--security); stroke-width: 1.4; }
+  .k-security .kind-t, .k-security .dot { fill: var(--security); }
+
+  .k-publish .box { fill: var(--publish-bg); stroke: var(--publish); stroke-width: 1.4; }
+  .k-publish .kind-t, .k-publish .dot { fill: var(--publish); }
+
+  .k-dest .box { fill: var(--dest-bg); stroke: var(--dest); stroke-width: 1.4; }
+  .k-dest .kind-t, .k-dest .dot { fill: var(--dest); }
+
+  .d-ghpkg .box { fill: var(--bg); stroke: var(--ghpkg); stroke-width: 2; }
+  .d-ghpkg .accent { fill: var(--ghpkg); }
+  .e-ghpkg { fill: none; stroke: var(--ghpkg); stroke-width: 2; }
+  .a-ghpkg { fill: var(--ghpkg); }
+
+  .d-ghcr .box { fill: var(--bg); stroke: var(--ghcr); stroke-width: 2; }
+  .d-ghcr .accent { fill: var(--ghcr); }
+  .e-ghcr { fill: none; stroke: var(--ghcr); stroke-width: 2; }
+  .a-ghcr { fill: var(--ghcr); }
+
+  .d-nexus .box { fill: var(--bg); stroke: var(--nexus); stroke-width: 2; }
+  .d-nexus .accent { fill: var(--nexus); }
+  .e-nexus { fill: none; stroke: var(--nexus); stroke-width: 2; }
+  .a-nexus { fill: var(--nexus); }
+
+  .d-acr .box { fill: var(--bg); stroke: var(--acr); stroke-width: 2; }
+  .d-acr .accent { fill: var(--acr); }
+  .e-acr { fill: none; stroke: var(--acr); stroke-width: 2; }
+  .a-acr { fill: var(--acr); }
+
+</style>
+
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+</defs>
+<rect class="bg" x="0.5" y="0.5" width="1159" height="497" rx="12"/>
+<rect class="frame" x="20" y="20" width="1120" height="428" rx="12"/>
+<text class="h2" x="40" y="48">My Java App Workflow (Docker)</text>
+<text class="step-s mono" style="font-size:11px" x="40" y="66">.github/workflows/buildWorkflow _selfHosted_Docker.yml</text>
+<rect class="chip" x="951.7" y="36" width="170.3" height="20" rx="10"/><text class="chip-t mono" x="959.7" y="50">input: UploadToRegistry</text>
+<rect class="chip" x="786.8" y="36" width="156.9" height="20" rx="10"/><text class="chip-t mono" x="794.8" y="50">on: workflow_dispatch</text>
+<rect class="job" x="36" y="78" width="1088" height="146" rx="10"/>
+<text class="h3" x="58" y="105">job: build</text>
+<rect class="chip" x="145.6" y="91" width="203.9" height="20" rx="10"/><text class="chip-t mono" x="153.6" y="105">runs-on: Linux (self-hosted)</text>
+<g class="k-source">
+<rect class="box" x="60" y="124" width="146" height="80" rx="9"/>
+<circle class="dot" cx="73" cy="139" r="3.5"/>
+<text class="kind-t" x="82" y="142.5">SOURCE</text>
+<text class="step-t" x="133.0" y="166" text-anchor="middle">Checkout</text>
+<text class="step-s mono" x="133.0" y="194" text-anchor="middle">actions/checkout@v4</text>
+</g>
+<g class="k-setup">
+<rect class="box" x="236" y="124" width="146" height="80" rx="9"/>
+<circle class="dot" cx="249" cy="139" r="3.5"/>
+<text class="kind-t" x="258" y="142.5">SETUP</text>
+<text class="step-t" x="309.0" y="166" text-anchor="middle">Set up JDK 17</text>
+<text class="step-s mono" x="309.0" y="194" text-anchor="middle">temurin · maven cache</text>
+</g>
+<g class="k-build">
+<rect class="box" x="412" y="124" width="146" height="80" rx="9"/>
+<circle class="dot" cx="425" cy="139" r="3.5"/>
+<text class="kind-t" x="434" y="142.5">BUILD</text>
+<text class="step-t" x="485.0" y="166" text-anchor="middle">Maven build</text>
+<text class="step-s mono" x="485.0" y="194" text-anchor="middle">mvn clean package</text>
+</g>
+<g class="k-publish">
+<rect class="box" x="588" y="124" width="146" height="80" rx="9"/>
+<circle class="dot" cx="601" cy="139" r="3.5"/>
+<text class="kind-t" x="610" y="142.5">PUBLISH</text>
+<text class="step-t" x="661.0" y="162" text-anchor="middle">Upload build</text>
+<text class="step-t" x="661.0" y="177" text-anchor="middle">artifact</text>
+<text class="step-s mono" x="661.0" y="194" text-anchor="middle">upload-artifact@v4</text>
+</g>
+<path class="edge" d="M208,164.0 H233" marker-end="url(#ah)"/>
+<path class="edge" d="M384,164.0 H409" marker-end="url(#ah)"/>
+<path class="edge" d="M560,164.0 H585" marker-end="url(#ah)"/>
+<path class="edge" d="M580.0,226 V283" marker-end="url(#ah)"/>
+<text class="chip-t mono" x="594.0" y="251.0">needs: build</text>
+<text class="chip-t" x="594.0" y="267.0">hands over the JAR as a build artifact</text>
+<rect class="job" x="36" y="286" width="1088" height="146" rx="10"/>
+<text class="h3" x="58" y="313">job: docker</text>
+<rect class="chip" x="153.2" y="299" width="203.9" height="20" rx="10"/><text class="chip-t mono" x="161.2" y="313">runs-on: Linux (self-hosted)</text>
+<rect class="chip" x="902.1" y="299" width="203.9" height="20" rx="10"/><text class="chip-t mono" x="910.1" y="313">if: UploadToRegistry == true</text>
+<g class="k-source">
+<rect class="box" x="60" y="332" width="146" height="80" rx="9"/>
+<circle class="dot" cx="73" cy="347" r="3.5"/>
+<text class="kind-t" x="82" y="350.5">SOURCE</text>
+<text class="step-t" x="133.0" y="370" text-anchor="middle">Download build</text>
+<text class="step-t" x="133.0" y="385" text-anchor="middle">artifact</text>
+<text class="step-s mono" x="133.0" y="402" text-anchor="middle">download-artifact@v5</text>
+</g>
+<g class="k-setup">
+<rect class="box" x="236" y="332" width="146" height="80" rx="9"/>
+<circle class="dot" cx="249" cy="347" r="3.5"/>
+<text class="kind-t" x="258" y="350.5">SETUP</text>
+<text class="step-t" x="309.0" y="370" text-anchor="middle">Log in to</text>
+<text class="step-t" x="309.0" y="385" text-anchor="middle">GHCR</text>
+<text class="step-s mono" x="309.0" y="402" text-anchor="middle">docker/login-action</text>
+</g>
+<g class="k-build">
+<rect class="box" x="412" y="332" width="146" height="80" rx="9"/>
+<circle class="dot" cx="425" cy="347" r="3.5"/>
+<text class="kind-t" x="434" y="350.5">BUILD</text>
+<text class="step-t" x="485.0" y="374" text-anchor="middle">Docker build</text>
+<text class="step-s mono" x="485.0" y="402" text-anchor="middle">myjavapp:&lt;run_no&gt;</text>
+</g>
+<g class="k-security">
+<rect class="box" x="588" y="332" width="146" height="80" rx="9"/>
+<circle class="dot" cx="601" cy="347" r="3.5"/>
+<text class="kind-t" x="610" y="350.5">SECURITY</text>
+<text class="step-t" x="661.0" y="370" text-anchor="middle">Trivy image</text>
+<text class="step-t" x="661.0" y="385" text-anchor="middle">scan</text>
+<text class="step-s mono" x="661.0" y="402" text-anchor="middle">trivy-action@0.32</text>
+</g>
+<g class="k-publish">
+<rect class="box" x="764" y="332" width="146" height="80" rx="9"/>
+<circle class="dot" cx="777" cy="347" r="3.5"/>
+<text class="kind-t" x="786" y="350.5">PUBLISH</text>
+<text class="step-t" x="837.0" y="374" text-anchor="middle">Docker push</text>
+<text class="step-s mono" x="837.0" y="402" text-anchor="middle">docker push</text>
+</g>
+<g class="k-dest">
+<path class="box" d="M940,341 a73.0,9 0 0,0 146,0 a73.0,9 0 0,0 -146,0 v62 a73.0,9 0 0,0 146,0 v-62"/>
+<text class="step-t" x="1013.0" y="364" text-anchor="middle">GHCR</text>
+<text class="step-s mono" x="1013.0" y="402" text-anchor="middle">ghcr.io</text>
+</g>
+<path class="edge" d="M208,372.0 H233" marker-end="url(#ah)"/>
+<path class="edge" d="M384,372.0 H409" marker-end="url(#ah)"/>
+<path class="edge" d="M560,372.0 H585" marker-end="url(#ah)"/>
+<path class="edge" d="M736,372.0 H761" marker-end="url(#ah)"/>
+<path class="edge" d="M912,372.0 H937" marker-end="url(#ah)"/>
+<g class="k-source"><rect class="box" x="32" y="466" width="14" height="14" rx="3"/></g><text class="chip-t" x="52" y="477">Source</text>
+<g class="k-setup"><rect class="box" x="114.96000000000001" y="466" width="14" height="14" rx="3"/></g><text class="chip-t" x="134.96" y="477">Setup / login</text>
+<g class="k-build"><rect class="box" x="241.04000000000002" y="466" width="14" height="14" rx="3"/></g><text class="chip-t" x="261.04" y="477">Build</text>
+<g class="k-security"><rect class="box" x="317.84000000000003" y="466" width="14" height="14" rx="3"/></g><text class="chip-t" x="337.84000000000003" y="477">Security scan</text>
+<g class="k-publish"><rect class="box" x="443.9200000000001" y="466" width="14" height="14" rx="3"/></g><text class="chip-t" x="463.9200000000001" y="477">Publish</text>
+<g class="k-dest"><rect class="box" x="533.0400000000001" y="466" width="14" height="14" rx="7"/></g><text class="chip-t" x="553.0400000000001" y="477">Destination</text>
+<rect class="chip cond" x="646.8000000000001" y="466" width="26" height="14" rx="4" style="fill:none;stroke:var(--muted);stroke-width:1.4"/><text class="chip-t" x="678.8000000000001" y="477">Runs only when the boolean input is true</text>
+</svg>
