@@ -1,0 +1,11 @@
+name: K8s selfhosted runners poc
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: arc-runner-set
+
+    steps:
+    - name: Checkout application
+      uses: actions/checkout@v4
