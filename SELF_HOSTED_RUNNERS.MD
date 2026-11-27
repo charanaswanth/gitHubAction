@@ -296,6 +296,35 @@ Start it from the **Actions** tab. While it runs, `kubectl get pods -n arc-runne
      oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
    ```
 
+- Use yaml file to upload multiple configurations such as cpu and memory configuration
+
+   ```yaml
+   githubConfigUrl: "https://github.com/charanaswanth/gitHubAction"
+   githubConfigSecret: arc-github-app
+   minRunners: 1
+   maxRunners: 2
+   template:
+   spec:
+      containers:
+         - name: runner
+         image: mydemoacr97.azurecr.io/arc-runner:1.0.0
+         command: ["/home/runner/run.sh"]
+         resources:
+            requests:
+               cpu: 500m
+               memory: 1Gi
+            limits:
+               cpu: "1"
+               memory: 2Gi
+   ```
+
+   ```bash
+   helm upgrade --install arc-runner-set \
+     --namespace arc-runner \
+     -f values.yaml \
+     oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+   ```
+
 ### Remove ARC
 
 Uninstall the scale set **before** the controller, so the controller can deregister the runners from GitHub and clean up their pods:
