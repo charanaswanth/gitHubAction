@@ -151,7 +151,7 @@ The **Helm release name of the scale set is the label** that workflows use in `r
 
 ### Prerequisites
 
-- An AKS cluster. In this POC it is created with the Terraform scripts in `<terraform-repo-link>`.
+- An AKS cluster. In this POC it is created with the Terraform scripts in `https://github.com/charanaswanth/terraform/tree/master/AzureKubernetesService`.
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), plus `kubectl` and [Helm 3](https://helm.sh/docs/intro/install/) if you reach the cluster API directly.
 - Admin access to this repository, to create and install the GitHub App.
 
@@ -304,18 +304,18 @@ Start it from the **Actions** tab. While it runs, `kubectl get pods -n arc-runne
    minRunners: 1
    maxRunners: 2
    template:
-   spec:
-      containers:
-         - name: runner
-         image: mydemoacr97.azurecr.io/arc-runner:1.0.0
-         command: ["/home/runner/run.sh"]
-         resources:
-            requests:
-               cpu: 500m
-               memory: 1Gi
-            limits:
-               cpu: "1"
-               memory: 2Gi
+      spec:
+         containers:
+            - name: runner
+            image: mydemoacr97.azurecr.io/arc-runner:1.0.0
+            command: ["/home/runner/run.sh"]
+            resources:
+               requests:
+                  cpu: 500m
+                  memory: 1Gi
+               limits:
+                  cpu: "1"
+                  memory: 2Gi
    ```
 
    ```bash
