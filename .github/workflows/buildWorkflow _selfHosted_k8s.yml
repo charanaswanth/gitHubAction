@@ -1,4 +1,4 @@
-name: K8s selfhosted runners poc
+name: My App (k8s Selfhosted)
 
 on: workflow_dispatch
 

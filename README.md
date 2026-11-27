@@ -48,6 +48,10 @@ The **Upstream** workflow builds the JAR, optionally deploys it to GitHub Packag
 
 ![Upstream and downstream workflows](images/workflow-upstream-downstream.svg)
 
+### 8. Self-hosted runners on Kubernetes (ARC)
+
+Runs on `arc-runner-set`, a runner scale set that [Actions Runner Controller](https://github.com/actions/actions-runner-controller) manages in an AKS cluster. Each job gets a new, ephemeral runner pod. This POC workflow only checks out the repository, to prove that jobs reach the cluster. See [Kubernetes runners](SELF_HOSTED_RUNNERS.MD#kubernetes-runners-actions-runner-controller) for the cluster setup and how to use a custom runner image.
+
 ## Workflows Overview
 
 | Workflow | File | Trigger | Runner | Output |
@@ -60,8 +64,13 @@ The **Upstream** workflow builds the JAR, optionally deploys it to GitHub Packag
 | My Java App Workflow (ACR) | [buildWorkflow _selfHosted_ACR.yml](.github/workflows/buildWorkflow%20_selfHosted_ACR.yml) | manual, `UploadToRegistry` | self-hosted `Linux` | Docker image → ACR *(optional)* |
 | My Java App Workflow (Upstream) | [buildWorkflow _upStream.yml](.github/workflows/buildWorkflow%20_upStream.yml) | manual, `UploadToPackage` | `ubuntu-latest` | JAR artifact, GitHub Packages *(optional)* |
 | My Java App Workflow (Downstream) | [buildWorkflow _downStream.yml](.github/workflows/buildWorkflow%20_downStream.yml) | `workflow_run` of Upstream | `ubuntu-latest` | Docker image → GHCR |
+| My App (k8s Selfhosted) | [buildWorkflow _selfHosted_k8s.yml](.github/workflows/buildWorkflow%20_selfHosted_k8s.yml) | manual | ARC scale set `arc-runner-set` (AKS) | Checkout only *(POC)* |
 
 *Optional* means that step or job runs only when you tick the boolean input when you start the workflow. In the diagrams below, dashed boxes and arrows mark these conditional parts.
+
+## Self-hosted runner setup
+
+To set up the Linux, Windows and Kubernetes (ARC) runners these workflows need, see [SELF_HOSTED_RUNNERS.MD](SELF_HOSTED_RUNNERS.MD).
 
 ## Secrets and configuration
 
@@ -71,5 +80,7 @@ The **Upstream** workflow builds the JAR, optionally deploys it to GitHub Packag
 | `NEXUS_USERNAME`, `NEXUS_PASSWORD` | Selfhosted-Nexus | Nexus credentials referenced by `settingsNexus.xml` |
 | `AZURE_CREDENTIALS` | ACR | Service principal JSON for `azure/login` |
 | `REGISTRY_LOGIN_SERVER`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` | ACR | ACR login server and credentials |
+
+The Kubernetes runners don't use repository secrets. ARC authenticates with a GitHub App whose credentials are stored as the Kubernetes secret `arc-github-app` (see [step 4](SELF_HOSTED_RUNNERS.MD#4-store-the-github-app-credentials-as-a-secret)).
 
 To push to GitHub Packages or GHCR, the repository's **Settings → Actions → General → Workflow permissions** must allow *Read and write*.

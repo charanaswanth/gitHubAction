@@ -1,5 +1,14 @@
 # Setting up self-hosted runners
 
+This guide covers two ways to run this repository's self-hosted workflows:
+
+- [**VM runners (Linux and Windows)**](#vm-runners-linux-and-windows): the runner application installed directly on a machine. Used by the `Linux` and `Windows` workflows.
+- [**Kubernetes runners (Actions Runner Controller)**](#kubernetes-runners-actions-runner-controller): runner pods that ARC creates on demand in an AKS cluster. Used by the K8s workflow.
+
+---
+
+## VM runners (Linux and Windows)
+
 The self-hosted workflows use `runs-on: Linux` or `runs-on: Windows`. These are default labels that GitHub adds when a runner is registered on that OS, so no custom labels are needed.
 
 ### Get the registration commands
@@ -32,7 +41,7 @@ The steps below follow those commands. Replace `<version>` and `<TOKEN>` with th
 3. **Register the runner** with this repository. Press Enter to accept the default runner group and labels (`self-hosted`, `Linux`, `X64`).
 
    ```bash
-   ./config.sh --url https://github.com/charanaswanthss/githubActions --token <TOKEN> --name linux-runner-01
+   ./config.sh --url https://github.com/charanaswanth/gitHubAction --token <TOKEN> --name linux-runner-01
    ```
 
 4. **Start the runner.** Use either option:
@@ -80,7 +89,7 @@ Run these steps in **PowerShell as Administrator**.
 3. **Register the runner** with this repository. When prompted *"Would you like to run the runner as service?"*, answer **Y** to install it as a Windows service that starts on boot.
 
    ```powershell
-   .\config.cmd --url https://github.com/charanaswanthss/githubActions --token <TOKEN> --name windows-runner-01
+   .\config.cmd --url https://github.com/charanaswanth/gitHubAction --token <TOKEN> --name windows-runner-01
    ```
 
 4. **Start the runner.** If you didn't install it as a service, run it in the foreground:
@@ -105,49 +114,196 @@ sudo ./svc.sh stop && sudo ./svc.sh uninstall              # Linux, if installed
 .\config.cmd remove --token <TOKEN>                        # Windows (also removes the service)
 ```
 
-### K8s runner
+---
 
-1. Github Apps Installation
-- Settings -> Developer Settings -> Install App
--   Github App name :
-    Homepage URL : https://github.com
-    Uncheck Wehbhool URL
-    Actions - Read Only
-    Administartion - Read And Write 
-- Install
-- Get AppID and Cleint ID
-- generate Private key and save it
-Install and get Installation ID Example: https://github.com/settings/installations/186458135
+## Kubernetes runners (Actions Runner Controller)
 
-2. AKS cluster is created using the terraform scripts in <repo_link>
-3. Create tqwo namespace. one for controller and another for runner
-    kubectl create namespace arc-controller
-    kubectl create namespace arc-runner
-4. Install Actions Runner Controller
-    helm install arc \
-    --namespace arc-controller \
-    oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
-5. Install Runner scale set
-    Create secret
-    az aks command invoke --resource-group my-demo-dev --name my-demo-aks-dev --command "kubectl create secret generic arc-github-app -n arc-runner --from-literal=github_app_id=5950754 --from-literal=github_app_installation_id=186458135 --from-file=github_app_private_key=poc.pem" --file poc.pem
+[Actions Runner Controller (ARC)](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/about-actions-runner-controller) runs GitHub Actions runners as pods in a Kubernetes cluster. Instead of a long-lived machine, each job gets a fresh, ephemeral runner pod that is deleted when the job finishes.
 
+### How it works
 
-        helm install arc-runner-set --namespace arc-runner --set githubConfigUrl="https://github.com/charanaswanth/githubActions" --set githubConfigSecret=arc-github-app --set minRunners=0 --set maxRunners=2 oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+ARC is installed as two Helm charts:
 
-helm list -A
-![alt text](image.png)
+| Component | Helm release | Namespace | Role |
+|---|---|---|---|
+| Controller | `arc` | `arc-controller` | Watches runner scale sets and creates the listener and runner pods. |
+| Runner scale set | `arc-runner-set` | `arc-runner` | Registers with this repository and defines the runner pod (image, min/max count). |
 
+1. The scale set signs in to GitHub with a **GitHub App** and registers itself as a runner scale set on the repository.
+2. A **listener pod** (in `arc-controller`) holds a long-poll connection to GitHub and waits for jobs.
+3. When a workflow job has `runs-on: arc-runner-set`, the listener asks the controller for a runner, and the controller starts a **runner pod** in `arc-runner`.
+4. The runner pod runs the job, then exits and is removed. The scale set keeps between `minRunners` and `maxRunners` pods.
+
+The **Helm release name of the scale set is the label** that workflows use in `runs-on`. Renaming the release changes the label.
+
+### Values used in this POC
+
+| Item | Value |
+|---|---|
+| AKS resource group / cluster | `my-demo-dev` / `my-demo-aks-dev` |
+| ARC chart version | `0.15.1` |
+| Controller namespace / release | `arc-controller` / `arc` |
+| Runner namespace / release (`runs-on` label) | `arc-runner` / `arc-runner-set` |
+| GitHub App secret | `arc-github-app` (in `arc-runner`) |
+| Runners | `minRunners=1`, `maxRunners=2` |
+| Custom runner image | `mydemoacr97.azurecr.io/arc-runner:1.0.0` |
+| Repository | `https://github.com/charanaswanth/gitHubAction` |
+
+### Prerequisites
+
+- An AKS cluster. In this POC it is created with the Terraform scripts in `<terraform-repo-link>`.
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), plus `kubectl` and [Helm 3](https://helm.sh/docs/intro/install/) if you reach the cluster API directly.
+- Admin access to this repository, to create and install the GitHub App.
+
+> **Private AKS clusters.** If the cluster's API server isn't reachable from your machine, run each `kubectl` and `helm` command below through `az aks command invoke`, which runs it inside the cluster:
+>
+> ```bash
+> az aks command invoke --resource-group my-demo-dev --name my-demo-aks-dev \
+>   --command "<kubectl or helm command>"
+> ```
+>
+> Add `--file <local-file>` to upload a file the command needs (step 4 does this for the private key). For a public cluster, get credentials once with `az aks get-credentials --resource-group my-demo-dev --name my-demo-aks-dev` and run the commands directly.
+
+### 1. Create and install a GitHub App
+
+ARC authenticates to GitHub with a GitHub App. An App is preferred over a personal access token because it isn't tied to a user and its tokens are short-lived.
+
+1. Go to your profile **Settings → Developer settings → GitHub Apps → New GitHub App**.
+2. Fill in the form:
+   - **GitHub App name**: any unique name, for example `arc-runners-<your-user>`.
+   - **Homepage URL**: `https://github.com` (any URL works; it isn't used).
+   - **Webhook**: clear the **Active** checkbox. ARC doesn't use webhooks.
+   - **Repository permissions**:
+     - **Actions**: Read-only
+     - **Administration**: Read and write *(needed to register runners)*
+     - **Metadata**: Read-only *(selected automatically)*
+   - **Where can this GitHub App be installed?**: *Only on this account*.
+3. Click **Create GitHub App**. On the app's **General** page, note the **App ID**.
+4. Under **Private keys**, click **Generate a private key**. A `.pem` file downloads. Store it securely and never commit it to the repository.
+5. Click **Install App** in the left menu, choose your account, select **Only select repositories → gitHubAction**, and click **Install**.
+6. After installing, the browser shows a URL such as `https://github.com/settings/installations/186458135`. The number at the end is the **Installation ID**.
+
+You now have the three values ARC needs: **App ID**, **Installation ID** and the **private key file**.
+
+### 2. Create the namespaces
+
+Keep the controller and the runners in separate namespaces:
+
+```bash
+kubectl create namespace arc-controller
+kubectl create namespace arc-runner
+```
+
+### 3. Install the controller
+
+```bash
+helm install arc \
+  --namespace arc-controller \
+  --version 0.15.1 \
+  oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+```
+
+Check that the controller pod is running:
+
+```bash
 kubectl get pods -n arc-controller
-![alt text](image-1.png)
+```
+
+![Controller pod running in arc-controller](images/k8s-controller-pods.png)
+
+### 4. Store the GitHub App credentials as a secret
+
+The secret must be in the **runner** namespace (`arc-runner`), and the key names must be exactly `github_app_id`, `github_app_installation_id` and `github_app_private_key`.
+
+```bash
+kubectl create secret generic arc-github-app \
+  --namespace arc-runner \
+  --from-literal=github_app_id=<APP_ID> \
+  --from-literal=github_app_installation_id=<INSTALLATION_ID> \
+  --from-file=github_app_private_key=<path-to-private-key>.pem
+```
+
+### 5. Install the runner scale set
+
+```bash
+helm install arc-runner-set \
+  --namespace arc-runner \
+  --version 0.15.1 \
+  --set githubConfigUrl="https://github.com/charanaswanth/gitHubAction" \
+  --set githubConfigSecret=arc-github-app \
+  --set minRunners=1 \
+  --set maxRunners=2 \
+  oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+```
+
+| Setting | Meaning |
+|---|---|
+| `arc-runner-set` (release name) | The scale set name, and the label used in `runs-on`. |
+| `githubConfigUrl` | Where runners register. A repository URL registers them for this repository only. |
+| `githubConfigSecret` | The secret created in step 4. |
+| `minRunners` | Idle runner pods kept ready. `1` avoids a cold start; `0` saves resources. |
+| `maxRunners` | Maximum runner pods, so the maximum number of jobs running at once. |
+
+Keep the controller and scale set charts on the **same version**.
+
+### 6. Verify the installation
+
+Both Helm releases should show as `deployed`:
+
+```bash
+helm list -A
+```
+
+![helm list showing the arc and arc-runner-set releases](images/k8s-helm-list.png)
+
+With `minRunners=1`, one idle runner pod is running:
+
+```bash
 kubectl get pods -n arc-runner
+```
 
-name: Actions Runner Controller Demo
-on:
-  workflow_dispatch:
+![Runner pod running in arc-runner](images/k8s-runner-pods.png)
 
-jobs:
-  Explore-GitHub-Actions:
-    # You need to use the INSTALLATION_NAME from the previous step
-    runs-on: arc-runner-set
-    steps:
-    - run: echo "🎉 This job uses runner scale set runners!"
+In the repository, go to **Settings → Actions → Runners**. The scale set `arc-runner-set` appears under **Runner scale sets** with status **Online**. Individual runner pods also appear in the **Runners** list; they show as offline once their pod has gone, which is expected for ephemeral runners.
+
+![arc-runner-set listed under Runner scale sets](images/k8s-github-runners.png)
+
+### 7. Run a workflow on the Kubernetes runners
+
+Set `runs-on` to the scale set name. [buildWorkflow _selfHosted_k8s.yml](.github/workflows/buildWorkflow%20_selfHosted_k8s.yml) is a minimal POC workflow that checks out the repository on an ARC runner:
+
+![workflow runs on arc-runner-set ](images/k8s-worklfow-runner-set.png)
+
+Start it from the **Actions** tab. While it runs, `kubectl get pods -n arc-runner` shows the runner pod that picked up the job, and the job log's *Set up job* step shows the same runner name.
+
+### Use a custom runner image
+
+- The default image `ghcr.io/actions/actions-runner`, contains only the runner and a few basic tools. To install other custom tools either extend with the official runner image `ghcr.io/actions/actions-runner:<version>` or create new DockerImage.
+
+- Update the arc-runner helm with the custom image
+
+   ```bash
+   helm upgrade --install arc-runner-set \
+     --namespace arc-runner \
+     --version 0.15.1 \
+     --set githubConfigUrl="https://github.com/charanaswanth/gitHubAction" \
+     --set githubConfigSecret=arc-github-app \
+     --set minRunners=1 \
+     --set maxRunners=2 \
+     --set "template.spec.containers[0].name=runner" \
+     --set "template.spec.containers[0].image=mydemoacr97.azurecr.io/arc-runner:1.0.0" \
+     --set "template.spec.containers[0].command[0]=/home/runner/run.sh" \
+     oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
+   ```
+
+### Remove ARC
+
+Uninstall the scale set **before** the controller, so the controller can deregister the runners from GitHub and clean up their pods:
+
+```bash
+helm uninstall arc-runner-set -n arc-runner
+helm uninstall arc -n arc-controller
+kubectl delete namespace arc-runner arc-controller
+```
+
+Then, if the GitHub App is no longer needed, uninstall it under **Settings → Applications → Installed GitHub Apps**, and delete it under **Developer settings → GitHub Apps**.
